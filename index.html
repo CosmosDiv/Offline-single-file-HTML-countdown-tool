@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>柔和风格倒计时工具</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-size: 16px;
+      --surface: rgba(255, 255, 255, 0.82);
+      --surface-strong: rgba(255, 255, 255, 0.94);
+      --border: rgba(206, 212, 224, 0.55);
+      --accent: #007aff;
+      --accent-muted: rgba(0, 122, 255, 0.12);
+      --accent-soft: #e6f0ff;
+      --text-primary: #1f2937;
+      --text-secondary: #6b7280;
+      --shadow: 0 22px 48px rgba(15, 23, 42, 0.14);
+      --radius-lg: 26px;
+      --radius-md: 18px;
+      --radius-sm: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "SF Pro Display", "SF Pro Text", "PingFang SC", "Helvetica Neue", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(150deg, #f9fbff 0%, #eef2ff 38%, #f8fbff 100%);
+      color: var(--text-primary);
+      transition: background-color 0.3s ease;
+    }
+
+    main {
+      width: min(1180px, 100%);
+      margin: 0 auto;
+      padding: clamp(1.8rem, 4vw, 3.2rem) clamp(1.2rem, 4vw, 3rem) 4.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: clamp(1.5rem, 3vw, 2.5rem);
+    }
+
+    .top-bar {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.1rem, 5vw, 3.2rem);
+      letter-spacing: -0.02em;
+    }
+
+    .lead {
+      margin: 0.5rem 0 0;
+      max-width: 48ch;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .ghost-button,
+    .primary-button {
+      border: none;
+      border-radius: 999px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      padding: 0.7rem 1.6rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      white-space: nowrap;
+    }
+
+    .primary-button {
+      background: linear-gradient(150deg, #0a84ff, #66a3ff);
+      color: #fff;
+      box-shadow: 0 14px 32px rgba(10, 132, 255, 0.28);
+    }
+
+    .primary-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 38px rgba(10, 132, 255, 0.32);
+    }
+
+    .ghost-button {
+      background: rgba(148, 163, 184, 0.16);
+      color: var(--text-primary);
+    }
+
+    .ghost-button:hover {
+      background: rgba(148, 163, 184, 0.22);
+    }
+
+    .timers-grid {
+      display: grid;
+      gap: clamp(1.1rem, 3vw, 1.8rem);
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    }
+
+    .timer-card {
+      background: var(--surface);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+      padding: 1.6rem 1.75rem 1.4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      position: relative;
+      overflow: hidden;
+      transition: box-shadow 0.3s ease, transform 0.3s ease;
+    }
+
+    .timer-card.flashing {
+      animation: card-flash 0.8s ease-in-out infinite;
+    }
+
+    @keyframes card-flash {
+      0%,
+      100% {
+        box-shadow: 0 22px 50px rgba(249, 115, 22, 0.28);
+        transform: translateY(-2px);
+        background-color: var(--surface);
+        border-color: var(--border);
+      }
+      50% {
+        box-shadow: 0 28px 60px rgba(249, 115, 22, 0.38);
+        transform: translateY(-4px);
+        background-color: rgba(255, 232, 213, 0.95);
+        border-color: rgba(249, 115, 22, 0.45);
+      }
+    }
+
+    .timer-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .timer-header-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .timer-delete {
+      border: none;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(148, 163, 184, 0.18);
+      color: var(--text-secondary);
+      font-size: 1.2rem;
+      line-height: 1;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    }
+
+    .timer-delete:hover {
+      background: rgba(248, 113, 113, 0.18);
+      color: #f97316;
+      transform: translateY(-1px);
+    }
+
+    .timer-delete:focus-visible {
+      outline: 2px solid rgba(249, 115, 22, 0.35);
+      outline-offset: 2px;
+    }
+
+    .timer-title {
+      font-weight: 600;
+      font-size: 1.15rem;
+    }
+
+    .timer-title small {
+      display: block;
+      margin-top: 0.25rem;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+
+    .timer-actions {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .timer-actions button {
+      padding: 0.45rem 1.1rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: var(--surface-strong);
+      font: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: background 0.2s ease, border 0.2s ease, transform 0.2s ease;
+    }
+
+    .timer-actions button:hover {
+      border-color: rgba(0, 122, 255, 0.4);
+      color: var(--accent);
+    }
+
+    .timer-actions button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .progress-shell {
+      display: grid;
+      place-items: center;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .progress-shell svg {
+      width: min(220px, 38vw);
+      height: min(220px, 38vw);
+      transform: rotate(-90deg);
+    }
+
+    .progress-shell circle {
+      fill: none;
+      stroke-width: 12;
+      stroke-linecap: round;
+    }
+
+    .progress-shell .track {
+      stroke: rgba(148, 163, 184, 0.25);
+    }
+
+    .progress-shell .progress {
+      stroke: var(--accent);
+      stroke-dasharray: 628;
+      stroke-dashoffset: 628;
+      transition: stroke-dashoffset 0.3s ease;
+    }
+
+    .progress-content {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+    }
+
+    .progress-content-inner {
+      display: grid;
+      gap: 0.45rem;
+      text-align: center;
+    }
+
+    .time-value {
+      font-size: clamp(2.1rem, 5vw, 3rem);
+      letter-spacing: 0.02em;
+      font-weight: 600;
+      text-align: center;
+      line-height: 1.3;
+    }
+
+    .duration-label {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .timer-note {
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .reminder-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+      pointer-events: none;
+      opacity: 0;
+      transform: scale(0.96);
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      background: radial-gradient(circle at center, rgba(255, 241, 232, 0.72), rgba(255, 249, 245, 0.4));
+    }
+
+    .timer-card.showing-reminder .reminder-overlay {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .reminder-overlay-content {
+      background: rgba(255, 255, 255, 0.94);
+      border-radius: var(--radius-md);
+      padding: clamp(1rem, 3vw, 1.6rem);
+      box-shadow: 0 26px 60px rgba(249, 115, 22, 0.32);
+      color: #b54708;
+      font-weight: 700;
+      font-size: clamp(1.15rem, 3vw, 1.65rem);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .empty-state {
+      background: rgba(255, 255, 255, 0.6);
+      border: 1px dashed rgba(148, 163, 184, 0.4);
+      border-radius: var(--radius-lg);
+      padding: 2.4rem;
+      text-align: center;
+      color: var(--text-secondary);
+      display: grid;
+      gap: 0.75rem;
+      place-items: center;
+    }
+
+    .badge {
+      padding: 0.32rem 0.75rem;
+      border-radius: 999px;
+      background: var(--accent-muted);
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+    }
+
+    .reminder-feed {
+      position: fixed;
+      top: clamp(1rem, 3vw, 2rem);
+      right: clamp(1rem, 4vw, 2.5rem);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      z-index: 20;
+      max-width: min(320px, 90vw);
+    }
+
+    .toast {
+      background: var(--surface-strong);
+      border-radius: var(--radius-md);
+      padding: 0.9rem 1.1rem;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      box-shadow: 0 16px 34px rgba(15, 23, 42, 0.18);
+      display: grid;
+      gap: 0.3rem;
+      animation: toast-in 0.3s ease;
+    }
+
+    .toast strong {
+      font-size: 0.95rem;
+    }
+
+    .toast small {
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    @keyframes toast-in {
+      from {
+        transform: translateY(-10px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .floating-sheet {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      z-index: 30;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.25s ease, visibility 0.25s ease;
+    }
+
+    .floating-sheet.visible {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    .sheet-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.26);
+      backdrop-filter: blur(6px);
+    }
+
+    .sheet-panel {
+      position: relative;
+      width: min(620px, 92vw);
+      max-height: min(90vh, 820px);
+      background: var(--surface-strong);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: sheet-in 0.28s ease;
+    }
+
+    @keyframes sheet-in {
+      from {
+        transform: translateY(14px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .sheet-header {
+      padding: 1.4rem 1.6rem 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .sheet-content {
+      padding: 0 1.6rem 1.4rem;
+      overflow-y: auto;
+      display: grid;
+      gap: 1.35rem;
+    }
+
+    #reminder-add-form {
+      display: grid;
+      gap: 1.2rem;
+    }
+
+    .close-button {
+      border: none;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: rgba(148, 163, 184, 0.18);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      transition: background 0.2s ease;
+    }
+
+    .close-button:hover {
+      background: rgba(148, 163, 184, 0.28);
+    }
+
+    form {
+      display: grid;
+      gap: 1.2rem;
+    }
+
+    .field {
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .field label {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    input[type="text"],
+    textarea,
+    input[type="number"] {
+      border: 1px solid rgba(148, 163, 184, 0.38);
+      border-radius: var(--radius-sm);
+      padding: 0.75rem 0.95rem;
+      font: inherit;
+      background: var(--surface);
+      color: inherit;
+      transition: border 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: inset 0 2px 6px rgba(15, 23, 42, 0.05);
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    input:focus,
+    textarea:focus {
+      outline: none;
+      border-color: rgba(0, 122, 255, 0.42);
+      box-shadow: 0 0 0 4px rgba(0, 122, 255, 0.12);
+    }
+
+    .inline-group {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(70px, 1fr));
+      gap: 0.6rem;
+    }
+
+    .inline-subgroup {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .config-stack {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .reminder-editor {
+      margin-top: 1rem;
+      background: rgba(255, 255, 255, 0.78);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+      padding: 1rem 1.1rem 1.1rem;
+      display: grid;
+      gap: 0.85rem;
+    }
+
+    .reminder-editor:first-of-type {
+      margin-top: 0.75rem;
+    }
+
+    .reminder-editor.collapsed [data-config] {
+      display: none;
+    }
+
+    .type-toggle {
+      display: inline-flex;
+      padding: 0.3rem;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.16);
+      gap: 0.4rem;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+    }
+
+    .type-toggle button {
+      border: none;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.6);
+      padding: 0.4rem 1rem;
+      font: inherit;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+      transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .type-toggle button.active {
+      background: var(--surface-strong);
+      color: var(--accent);
+      box-shadow: 0 10px 24px rgba(10, 132, 255, 0.2);
+      border: 1px solid rgba(10, 132, 255, 0.32);
+    }
+
+    .sheet-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+    }
+
+    .reminder-editor .form-footer {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .primary-button.compact {
+      padding: 0.55rem 1.3rem;
+      font-size: 0.85rem;
+      box-shadow: 0 10px 24px rgba(10, 132, 255, 0.24);
+    }
+
+    .primary-button.compact:hover {
+      box-shadow: 0 14px 28px rgba(10, 132, 255, 0.28);
+    }
+
+    .reminder-list {
+      display: grid;
+      gap: 0.75rem;
+    }
+
+    .reminder-item {
+      background: rgba(255, 255, 255, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.32);
+      border-radius: var(--radius-md);
+      padding: 0.75rem 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      flex-wrap: wrap;
+    }
+
+    .reminder-item strong {
+      font-size: 0.95rem;
+      margin-right: 0.15rem;
+    }
+
+    .reminder-chip {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.18);
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      line-height: 1.2;
+    }
+
+    .reminder-note-text {
+      color: var(--text-primary);
+      font-size: 0.82rem;
+    }
+
+    .reminder-item button {
+      margin-left: auto;
+      border: none;
+      background: rgba(244, 67, 54, 0.12);
+      color: #d14343;
+      border-radius: 999px;
+      padding: 0.3rem 0.85rem;
+      font-size: 0.8rem;
+      cursor: pointer;
+      line-height: 1;
+    }
+
+    @media (max-width: 760px) {
+      main {
+        padding: 1.4rem 1.1rem 3.2rem;
+      }
+
+      .timer-card {
+        padding: 1.3rem 1.3rem 1.2rem;
+      }
+
+      .progress-shell svg {
+        width: min(200px, 60vw);
+        height: min(200px, 60vw);
+      }
+
+      .inline-group {
+        grid-template-columns: repeat(3, minmax(60px, 1fr));
+      }
+
+      .sheet-panel {
+        width: min(520px, 94vw);
+      }
+    }
+
+    @media (max-width: 540px) {
+      .top-bar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .sheet-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .sheet-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .sheet-actions button {
+        justify-content: center;
+      }
+
+      .timer-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .timer-actions button {
+        flex: 1;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header class="top-bar">
+      <div>
+        <h1>柔和风格倒计时</h1>
+        <p class="lead">轻松管理多组倒计时，支持灵活提醒、备注与时间节点，聚焦在进行中的任务展示。</p>
+      </div>
+      <button class="primary-button" id="open-create" type="button">＋ 新建倒计时</button>
+    </header>
+
+    <section class="empty-state" id="empty-state">
+      <strong>还没有倒计时任务</strong>
+      <span>点击「新建倒计时」即可快速设定持续时长与提醒节点。</span>
+    </section>
+
+    <section class="timers-grid" id="timers" hidden></section>
+  </main>
+
+  <div class="floating-sheet" id="create-sheet" aria-hidden="true">
+    <div class="sheet-backdrop" data-dismiss></div>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="create-title">
+      <div class="sheet-header">
+        <div>
+          <h2 id="create-title">新建倒计时</h2>
+          <p class="lead" style="font-size:0.9rem; margin:0.35rem 0 0;">设置持续时长与提醒节点，所有选项随时可在任务中调整。</p>
+        </div>
+        <button class="close-button" type="button" data-dismiss aria-label="关闭创建面板">×</button>
+      </div>
+      <div class="sheet-content">
+        <form id="create-form" autocomplete="off">
+          <div class="field">
+            <label for="timer-title">计时名称</label>
+            <input id="timer-title" name="title" type="text" placeholder="例如：会议倒计时" required />
+          </div>
+
+          <div class="field">
+            <label>持续时长</label>
+            <div class="inline-group">
+              <input type="number" min="0" max="99" id="duration-hours" placeholder="小时" />
+              <input type="number" min="0" max="59" id="duration-minutes" placeholder="分钟" />
+              <input type="number" min="0" max="59" id="duration-seconds" placeholder="秒" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label for="timer-note">备注（可选）</label>
+            <textarea id="timer-note" placeholder="倒计时完成时的提示信息"></textarea>
+          </div>
+
+          <div class="field">
+            <label>提醒节点</label>
+            <div class="reminder-list" id="create-reminder-list"></div>
+            <div id="create-reminder-form" class="reminder-editor collapsed">
+              <div class="field">
+                <label>新增提醒节点</label>
+                <div class="type-toggle" role="group" aria-label="提醒类型">
+                  <button type="button" data-type="remaining">剩余时间</button>
+                  <button type="button" data-type="elapsed">流逝时间</button>
+                </div>
+              </div>
+              <div class="config-stack" data-config>
+                <div class="field">
+                  <label>提醒触发时间</label>
+                  <div class="inline-group">
+                    <input type="number" min="0" max="99" name="hours" placeholder="小时" />
+                    <input type="number" min="0" max="59" name="minutes" placeholder="分钟" />
+                    <input type="number" min="0" max="59" name="seconds" placeholder="秒" />
+                  </div>
+                </div>
+                <div class="inline-subgroup">
+                  <div class="field">
+                    <label>提前提醒（秒，可选）</label>
+                    <input type="number" min="0" name="lead" placeholder="0 表示准时" />
+                  </div>
+                  <div class="field">
+                    <label>提醒持续时间（秒）</label>
+                    <input type="number" min="1" name="duration" placeholder="例如：5" value="5" />
+                  </div>
+                </div>
+                <div class="field">
+                  <label>提醒备注（可选）</label>
+                  <textarea name="note" placeholder="提醒弹出时的提示"></textarea>
+                </div>
+                <div class="form-footer">
+                  <button type="button" class="primary-button compact" data-action="confirm-reminder">确认添加提醒</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sheet-actions">
+            <button type="button" class="ghost-button" data-dismiss>取消</button>
+            <button type="submit" class="primary-button">创建倒计时</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="floating-sheet" id="reminder-sheet" aria-hidden="true">
+    <div class="sheet-backdrop" data-dismiss></div>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="reminder-title">
+      <div class="sheet-header">
+        <div>
+          <h2 id="reminder-title">提醒节点</h2>
+          <p class="lead" style="font-size:0.9rem; margin:0.35rem 0 0;">查看与管理当前倒计时的备注与提醒时间点。</p>
+        </div>
+        <button class="close-button" type="button" data-dismiss aria-label="关闭提醒面板">×</button>
+      </div>
+      <div class="sheet-content">
+        <div class="field">
+          <label>倒计时备注</label>
+          <div class="timer-note" id="reminder-note"></div>
+        </div>
+        <div class="field">
+          <label>已设置的提醒节点</label>
+          <div class="reminder-list" id="reminder-list"></div>
+        </div>
+        <form id="reminder-add-form" class="reminder-editor collapsed" autocomplete="off">
+          <div class="field">
+            <label>新增提醒节点</label>
+            <div class="type-toggle" role="group" aria-label="提醒类型">
+              <button type="button" data-type="remaining">剩余时间</button>
+              <button type="button" data-type="elapsed">流逝时间</button>
+            </div>
+          </div>
+          <div class="config-stack" data-config>
+            <div class="field">
+              <label>提醒触发时间</label>
+              <div class="inline-group">
+                <input type="number" min="0" max="99" name="hours" placeholder="小时" />
+                <input type="number" min="0" max="59" name="minutes" placeholder="分钟" />
+                <input type="number" min="0" max="59" name="seconds" placeholder="秒" />
+              </div>
+            </div>
+            <div class="inline-subgroup">
+              <div class="field">
+                <label>提前提醒（秒，可选）</label>
+                <input type="number" min="0" name="lead" placeholder="0 表示准时" />
+              </div>
+              <div class="field">
+                <label>提醒持续时间（秒）</label>
+                <input type="number" min="1" name="duration" placeholder="例如：5" value="5" />
+              </div>
+            </div>
+            <div class="field">
+              <label>提醒备注（可选）</label>
+              <textarea name="note" placeholder="提醒弹出时的提示"></textarea>
+            </div>
+            <div class="form-footer">
+              <button type="submit" class="primary-button compact">确认添加提醒</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="reminder-feed" aria-live="polite"></div>
+
+  <template id="timer-template">
+    <article class="timer-card">
+      <div class="timer-header">
+        <div class="timer-title"><span class="title-main"></span><small class="title-sub">剩余 00分00秒</small></div>
+        <div class="timer-header-controls">
+          <span class="badge"><span class="status-dot">●</span><span class="status-text">已准备</span></span>
+          <button type="button" class="timer-delete" aria-label="删除倒计时">×</button>
+        </div>
+      </div>
+      <div class="progress-shell" role="button" tabindex="0">
+        <svg viewBox="0 0 220 220" aria-hidden="true">
+          <circle class="track" cx="110" cy="110" r="100"></circle>
+          <circle class="progress" cx="110" cy="110" r="100"></circle>
+        </svg>
+        <div class="progress-content">
+          <div class="progress-content-inner">
+            <div class="time-value">00分00秒</div>
+            <div class="duration-label">倒计时 00分00秒</div>
+          </div>
+        </div>
+      </div>
+      <div class="reminder-overlay" aria-hidden="true">
+        <div class="reminder-overlay-content"></div>
+      </div>
+      <div class="timer-note"></div>
+      <div class="timer-actions">
+        <button data-action="start">开始</button>
+        <button data-action="pause">暂停</button>
+        <button data-action="reset">重置</button>
+      </div>
+    </article>
+  </template>
+
+  <script>
+    const openCreateButton = document.getElementById('open-create');
+    const createSheet = document.getElementById('create-sheet');
+    const reminderSheet = document.getElementById('reminder-sheet');
+    const createForm = document.getElementById('create-form');
+    const createReminderList = document.getElementById('create-reminder-list');
+    const createReminderForm = document.getElementById('create-reminder-form');
+    const createReminderConfirmButton = createReminderForm.querySelector('[data-action="confirm-reminder"]');
+    const timersContainer = document.getElementById('timers');
+    const emptyState = document.getElementById('empty-state');
+    const reminderFeed = document.querySelector('.reminder-feed');
+    const template = document.getElementById('timer-template');
+    const reminderList = document.getElementById('reminder-list');
+    const reminderNote = document.getElementById('reminder-note');
+    const reminderAddForm = document.getElementById('reminder-add-form');
+
+    let timerIdCounter = 1;
+    let reminderIdCounter = 1;
+    const timers = new Map();
+    let activeReminderTimer = null;
+    let createReminderDrafts = [];
+
+    const createReminderTypeButtons = Array.from(createReminderForm.querySelectorAll('.type-toggle button'));
+    const setCreateReminderFormType = (type, { focus } = { focus: false }) => {
+      const normalized = type || '';
+      createReminderForm.dataset.type = normalized;
+      createReminderForm.classList.toggle('collapsed', !normalized);
+      createReminderTypeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.type === normalized));
+      if (normalized && focus) {
+        const hoursInput = createReminderForm.querySelector('input[name="hours"]');
+        if (hoursInput) {
+          setTimeout(() => hoursInput.focus(), 0);
+        }
+      }
+    };
+
+    setCreateReminderFormType('');
+    renderCreateReminderList();
+
+    const reminderTypeButtons = Array.from(reminderAddForm.querySelectorAll('.type-toggle button'));
+    const setReminderFormType = (type, { focus } = { focus: false }) => {
+      const normalized = type || '';
+      reminderAddForm.dataset.type = normalized;
+      reminderAddForm.classList.toggle('collapsed', !normalized);
+      reminderTypeButtons.forEach((btn) => btn.classList.toggle('active', btn.dataset.type === normalized));
+      if (normalized && focus) {
+        const hoursInput = reminderAddForm.querySelector('input[name="hours"]');
+        if (hoursInput) {
+          setTimeout(() => hoursInput.focus(), 0);
+        }
+      }
+    };
+
+    setReminderFormType('');
+
+    const formatTime = (ms) => {
+      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = totalSeconds % 60;
+      const segments = [];
+      if (hours > 0) {
+        segments.push(`${String(hours).padStart(2, '0')}小时`);
+      }
+      segments.push(`${String(minutes).padStart(2, '0')}分`);
+      segments.push(`${String(seconds).padStart(2, '0')}秒`);
+      return segments.join('');
+    };
+
+    const formatSeconds = (totalSeconds) => {
+      const hours = Math.floor(totalSeconds / 3600);
+      const minutes = Math.floor((totalSeconds % 3600) / 60);
+      const seconds = Math.floor(totalSeconds % 60);
+      const parts = [];
+      if (hours) parts.push(`${hours} 小时`);
+      if (minutes) parts.push(`${minutes} 分`);
+      if (seconds || parts.length === 0) parts.push(`${seconds} 秒`);
+      return parts.join(' ');
+    };
+
+    const resetReminderEditor = (editor) => {
+      editor.querySelectorAll('input, textarea').forEach((field) => {
+        if (field.tagName === 'TEXTAREA') {
+          field.value = field.defaultValue || '';
+        } else {
+          field.value = field.defaultValue || '';
+        }
+      });
+    };
+
+    function renderCreateReminderList() {
+      createReminderList.innerHTML = '';
+      if (!createReminderDrafts.length) {
+        const empty = document.createElement('div');
+        empty.className = 'reminder-item';
+        empty.innerHTML = '<small>暂未设置提醒节点。</small>';
+        createReminderList.appendChild(empty);
+        return;
+      }
+      const sorted = [...createReminderDrafts].sort((a, b) => a.valueSeconds - b.valueSeconds);
+      sorted.forEach((reminder, index) => {
+        const item = document.createElement('div');
+        item.className = 'reminder-item';
+        const typeLabel = reminder.type === 'remaining' ? '剩余' : '流逝';
+        const leadLabel = reminder.leadSeconds > 0 ? `提前 ${reminder.leadSeconds} 秒` : '准时提醒';
+        const durationLabel = `持续 ${reminder.durationSeconds} 秒`;
+        item.innerHTML = `
+          <strong>${typeLabel} ${formatSeconds(reminder.valueSeconds)}</strong>
+          <span class="reminder-chip">${leadLabel}</span>
+          <span class="reminder-chip">${durationLabel}</span>
+          ${reminder.note ? `<span class="reminder-note-text">备注：${reminder.note}</span>` : ''}
+          <button type="button" class="reminder-remove">删除</button>
+        `;
+        item.querySelector('.reminder-remove').addEventListener('click', () => {
+          const index = createReminderDrafts.indexOf(reminder);
+          if (index > -1) {
+            createReminderDrafts.splice(index, 1);
+            renderCreateReminderList();
+          }
+        });
+        createReminderList.appendChild(item);
+      });
+    }
+
+    const toggleSheet = (sheet, show) => {
+      if (show) {
+        sheet.classList.add('visible');
+        sheet.removeAttribute('aria-hidden');
+      } else {
+        sheet.classList.remove('visible');
+        sheet.setAttribute('aria-hidden', 'true');
+      }
+    };
+
+    const openCreateSheet = () => {
+      toggleSheet(createSheet, true);
+      const titleInput = document.getElementById('timer-title');
+      setTimeout(() => titleInput.focus(), 50);
+    };
+
+    const closeCreateSheet = () => {
+      toggleSheet(createSheet, false);
+      setTimeout(() => {
+        createForm.reset();
+        createReminderDrafts = [];
+        renderCreateReminderList();
+        resetReminderEditor(createReminderForm);
+        setCreateReminderFormType('');
+      }, 200);
+    };
+
+    const closeReminderSheet = () => {
+      toggleSheet(reminderSheet, false);
+      activeReminderTimer = null;
+      reminderList.innerHTML = '';
+      reminderAddForm.reset();
+      setReminderFormType('');
+    };
+
+    const showToast = (title, message) => {
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = `<strong>${title}</strong>`;
+      if (message) {
+        toast.insertAdjacentHTML('beforeend', `<small>${message}</small>`);
+      }
+      reminderFeed.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-8px)';
+        setTimeout(() => toast.remove(), 250);
+      }, 4000);
+    };
+
+    const showReminderHighlight = (timer, message, { durationMs = 0, persistent = false } = {}) => {
+      const { node, overlayEl, overlayContentEl } = timer.elements;
+      overlayContentEl.textContent = message;
+      overlayEl.setAttribute('aria-hidden', 'false');
+      node.classList.add('showing-reminder');
+      node.classList.add('flashing');
+      if (timer.overlayTimeoutId) {
+        clearTimeout(timer.overlayTimeoutId);
+        timer.overlayTimeoutId = null;
+      }
+      timer.activeReminder = { persistent };
+      if (!persistent && durationMs > 0) {
+        timer.overlayTimeoutId = setTimeout(() => {
+          hideReminderHighlight(timer);
+        }, durationMs);
+      }
+    };
+
+    const hideReminderHighlight = (timer) => {
+      if (timer.activeReminder?.persistent) {
+        return;
+      }
+      const { node, overlayEl, overlayContentEl } = timer.elements;
+      overlayEl.setAttribute('aria-hidden', 'true');
+      overlayContentEl.textContent = '';
+      node.classList.remove('showing-reminder');
+      node.classList.remove('flashing');
+      if (timer.overlayTimeoutId) {
+        clearTimeout(timer.overlayTimeoutId);
+        timer.overlayTimeoutId = null;
+      }
+      timer.activeReminder = null;
+    };
+
+    const clearReminderHighlight = (timer) => {
+      const { node, overlayEl, overlayContentEl } = timer.elements;
+      if (timer.overlayTimeoutId) {
+        clearTimeout(timer.overlayTimeoutId);
+        timer.overlayTimeoutId = null;
+      }
+      timer.activeReminder = null;
+      overlayEl.setAttribute('aria-hidden', 'true');
+      overlayContentEl.textContent = '';
+      node.classList.remove('showing-reminder');
+      node.classList.remove('flashing');
+    };
+
+    const setStatus = (timer, status) => {
+      timer.status = status;
+      const { statusText, statusDot } = timer.elements;
+      if (status === 'idle') {
+        statusText.textContent = '已准备';
+        statusDot.style.color = '#94a3b8';
+      } else if (status === 'running') {
+        statusText.textContent = '运行中';
+        statusDot.style.color = '#0a84ff';
+      } else if (status === 'paused') {
+        statusText.textContent = '已暂停';
+        statusDot.style.color = '#f59e0b';
+      } else if (status === 'completed') {
+        statusText.textContent = '已完成';
+        statusDot.style.color = '#10b981';
+      }
+    };
+
+    const updateEmptyState = () => {
+      const showEmpty = timers.size === 0;
+      emptyState.hidden = !showEmpty;
+      emptyState.setAttribute('aria-hidden', showEmpty ? 'false' : 'true');
+      emptyState.style.display = showEmpty ? 'grid' : 'none';
+      timersContainer.hidden = showEmpty;
+    };
+
+    const calculateDashOffset = (progressRatio) => {
+      const circumference = 2 * Math.PI * 100;
+      return circumference * (1 - progressRatio);
+    };
+
+    const renderTimerState = (timer) => {
+      const { timeEl, durationEl, progressCircle, titleSubEl } = timer.elements;
+      timeEl.textContent = formatTime(timer.remaining);
+      durationEl.textContent = `倒计时 ${formatTime(timer.totalDuration)}`;
+      titleSubEl.textContent = `剩余 ${formatTime(timer.remaining)}`;
+      const progress = Math.min(1, 1 - timer.remaining / timer.totalDuration);
+      progressCircle.style.strokeDashoffset = calculateDashOffset(progress);
+    };
+
+    const updateActionButtons = (timer) => {
+      const { startBtn, pauseBtn } = timer.elements;
+      if (timer.status === 'running') {
+        startBtn.disabled = true;
+        pauseBtn.disabled = false;
+        startBtn.textContent = '开始';
+      } else if (timer.status === 'completed') {
+        startBtn.disabled = false;
+        pauseBtn.disabled = true;
+        startBtn.textContent = '重新开始';
+      } else if (timer.status === 'paused') {
+        startBtn.disabled = false;
+        pauseBtn.disabled = true;
+        startBtn.textContent = '继续';
+      } else {
+        startBtn.disabled = false;
+        pauseBtn.disabled = true;
+        startBtn.textContent = '开始';
+      }
+    };
+
+    const parseDurationInputs = (hoursInput, minutesInput, secondsInput) => {
+      const hours = Number(hoursInput.value || 0);
+      const minutes = Number(minutesInput.value || 0);
+      const seconds = Number(secondsInput.value || 0);
+      return hours * 3600 + minutes * 60 + seconds;
+    };
+
+    const createTimerCard = (timer) => {
+      const node = template.content.firstElementChild.cloneNode(true);
+      const titleEl = node.querySelector('.timer-title');
+      const titleMainEl = node.querySelector('.title-main');
+      const titleSubEl = node.querySelector('.title-sub');
+      const timeEl = node.querySelector('.time-value');
+      const durationEl = node.querySelector('.duration-label');
+      const noteEl = node.querySelector('.timer-note');
+      const overlayEl = node.querySelector('.reminder-overlay');
+      const overlayContentEl = node.querySelector('.reminder-overlay-content');
+      const progressCircle = node.querySelector('.progress');
+      const progressShell = node.querySelector('.progress-shell');
+      const statusText = node.querySelector('.status-text');
+      const statusDot = node.querySelector('.status-dot');
+      const deleteBtn = node.querySelector('.timer-delete');
+      const startBtn = node.querySelector('button[data-action="start"]');
+      const pauseBtn = node.querySelector('button[data-action="pause"]');
+      const resetBtn = node.querySelector('button[data-action="reset"]');
+
+      titleMainEl.textContent = timer.title;
+      titleSubEl.textContent = `剩余 ${formatTime(timer.remaining)}`;
+      durationEl.textContent = `倒计时 ${formatTime(timer.totalDuration)}`;
+      noteEl.textContent = timer.note || '暂无备注';
+
+      startBtn.addEventListener('click', () => {
+        const previousStatus = timer.status;
+        if (timer.status === 'completed') {
+          timer.remaining = timer.totalDuration;
+          timer.reminders.forEach((r) => (r.triggered = false));
+          timer.completed = false;
+          clearReminderHighlight(timer);
+        }
+        if (timer.remaining <= 0) {
+          timer.remaining = timer.totalDuration;
+          clearReminderHighlight(timer);
+        }
+        timer.running = true;
+        timer.status = 'running';
+        timer.startTimestamp = Date.now();
+        timer.endTimestamp = timer.startTimestamp + timer.remaining;
+        setStatus(timer, 'running');
+        updateActionButtons(timer);
+        const startMessage = previousStatus === 'paused' ? '倒计时已继续' : '倒计时已开始';
+        showToast(timer.title, startMessage);
+      });
+
+      pauseBtn.addEventListener('click', () => {
+        if (!timer.running) return;
+        timer.remaining = Math.max(0, timer.endTimestamp - Date.now());
+        timer.running = false;
+        timer.status = 'paused';
+        timer.startTimestamp = null;
+        timer.endTimestamp = null;
+        renderTimerState(timer);
+        setStatus(timer, 'paused');
+        updateActionButtons(timer);
+        showToast(timer.title, '倒计时已暂停');
+      });
+
+      resetBtn.addEventListener('click', () => {
+        timer.running = false;
+        timer.completed = false;
+        timer.remaining = timer.totalDuration;
+        timer.reminders.forEach((r) => (r.triggered = false));
+        clearReminderHighlight(timer);
+        timer.status = 'idle';
+        timer.startTimestamp = null;
+        timer.endTimestamp = null;
+        renderTimerState(timer);
+        setStatus(timer, 'idle');
+        updateActionButtons(timer);
+        showToast(timer.title, '倒计时已重置');
+      });
+
+      deleteBtn.addEventListener('click', () => {
+        const confirmDelete = confirm(`确认删除“${timer.title}”倒计时吗？`);
+        if (!confirmDelete) return;
+        timer.running = false;
+        clearReminderHighlight(timer);
+        if (timer.overlayTimeoutId) {
+          clearTimeout(timer.overlayTimeoutId);
+          timer.overlayTimeoutId = null;
+        }
+        if (activeReminderTimer === timer) {
+          closeReminderSheet();
+        }
+        timers.delete(timer.id);
+        node.remove();
+        updateEmptyState();
+        showToast(timer.title, '倒计时已删除');
+      });
+
+      progressShell.addEventListener('click', () => openReminderSheet(timer));
+      progressShell.addEventListener('keypress', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openReminderSheet(timer);
+        }
+      });
+
+      timer.elements = {
+        node,
+        titleEl,
+        titleMainEl,
+        titleSubEl,
+        timeEl,
+        durationEl,
+        noteEl,
+        overlayEl,
+        overlayContentEl,
+        progressCircle,
+        progressShell,
+        statusText,
+        statusDot,
+        startBtn,
+        pauseBtn,
+        resetBtn,
+        deleteBtn,
+      };
+
+      setStatus(timer, timer.status || 'idle');
+      renderTimerState(timer);
+      updateActionButtons(timer);
+      timersContainer.prepend(node);
+    };
+
+    const openReminderSheet = (timer) => {
+      activeReminderTimer = timer;
+      reminderAddForm.reset();
+      setReminderFormType('');
+      reminderNote.textContent = timer.note || '暂无备注';
+      renderReminderList(timer);
+      toggleSheet(reminderSheet, true);
+    };
+
+    const renderReminderList = (timer) => {
+      reminderList.innerHTML = '';
+      if (!timer.reminders.length) {
+        const empty = document.createElement('div');
+        empty.className = 'reminder-item';
+        empty.innerHTML = '<small>暂未设置提醒节点。</small>';
+        reminderList.appendChild(empty);
+        return;
+      }
+      const sorted = [...timer.reminders].sort((a, b) => a.valueSeconds - b.valueSeconds);
+      sorted.forEach((reminder) => {
+        const item = document.createElement('div');
+        item.className = 'reminder-item';
+        const typeLabel = reminder.type === 'remaining' ? '剩余' : '流逝';
+        const leadLabel = reminder.leadSeconds > 0 ? `提前 ${reminder.leadSeconds} 秒` : '准时提醒';
+        const durationLabel = `持续 ${reminder.durationSeconds} 秒`;
+        item.innerHTML = `
+          <strong>${typeLabel} ${formatSeconds(reminder.valueSeconds)}</strong>
+          <span class="reminder-chip">${leadLabel}</span>
+          <span class="reminder-chip">${durationLabel}</span>
+          ${reminder.note ? `<span class="reminder-note-text">备注：${reminder.note}</span>` : ''}
+          <button type="button" class="reminder-remove">删除</button>
+        `;
+        item.querySelector('.reminder-remove').addEventListener('click', () => {
+          timer.reminders = timer.reminders.filter((r) => r.id !== reminder.id);
+          renderReminderList(timer);
+        });
+        reminderList.appendChild(item);
+      });
+    };
+
+    const createTimer = ({ title, totalDuration, note, reminders }) => {
+      const id = `timer-${timerIdCounter++}`;
+      const timer = {
+        id,
+        title,
+        note,
+        totalDuration,
+        remaining: totalDuration,
+        running: false,
+        status: 'idle',
+        startTimestamp: null,
+        endTimestamp: null,
+        reminders: reminders.map((reminder) => ({
+          ...reminder,
+          id: reminder.id || `reminder-${reminderIdCounter++}`,
+        })),
+        completed: false,
+        overlayTimeoutId: null,
+        activeReminder: null,
+        elements: {},
+      };
+      timers.set(id, timer);
+      createTimerCard(timer);
+      updateEmptyState();
+      showToast(title, '倒计时已创建');
+    };
+
+    const triggerReminder = (timer, reminder) => {
+      if (reminder.triggered) return;
+      reminder.triggered = true;
+      const durationMs = reminder.durationSeconds * 1000;
+      const message = reminder.note || timer.note || `${timer.title} 的提醒到达`;
+      showReminderHighlight(timer, message, { durationMs });
+      showToast(`${timer.title} · 提醒`, message);
+    };
+
+    const handleCompletion = (timer) => {
+      if (timer.completed) return;
+      timer.completed = true;
+      timer.running = false;
+      timer.status = 'completed';
+      timer.startTimestamp = null;
+      timer.endTimestamp = null;
+      setStatus(timer, 'completed');
+      updateActionButtons(timer);
+      timer.elements.timeEl.textContent = formatTime(0);
+      timer.elements.durationEl.textContent = `倒计时 ${formatTime(timer.totalDuration)}`;
+      timer.elements.titleSubEl.textContent = `剩余 ${formatTime(0)}`;
+      const message = timer.note || `${timer.title} 已完成`;
+      showToast(`${timer.title} · 完成`, message);
+      showReminderHighlight(timer, message, { persistent: true });
+    };
+
+    const evaluateReminders = (timer) => {
+      if (!timer.reminders.length || !timer.running) return;
+      const remainingSeconds = timer.remaining / 1000;
+      const elapsedSeconds = (timer.totalDuration - timer.remaining) / 1000;
+      timer.reminders.forEach((reminder) => {
+        if (reminder.triggered) return;
+        if (reminder.type === 'elapsed') {
+          const threshold = Math.max(0, reminder.valueSeconds - reminder.leadSeconds);
+          if (elapsedSeconds >= threshold) {
+            triggerReminder(timer, reminder);
+          }
+        } else {
+          const threshold = reminder.valueSeconds + reminder.leadSeconds;
+          if (remainingSeconds <= threshold) {
+            triggerReminder(timer, reminder);
+          }
+        }
+      });
+    };
+
+    const updateTimers = () => {
+      const now = Date.now();
+      timers.forEach((timer) => {
+        if (timer.running) {
+          timer.remaining = Math.max(0, timer.endTimestamp - now);
+          if (timer.remaining <= 0) {
+            timer.remaining = 0;
+            renderTimerState(timer);
+            handleCompletion(timer);
+            return;
+          }
+          renderTimerState(timer);
+          evaluateReminders(timer);
+        }
+      });
+    };
+
+    setInterval(updateTimers, 200);
+
+    document.addEventListener('click', (event) => {
+      if (event.target.closest('[data-dismiss]')) {
+        if (createSheet.classList.contains('visible')) {
+          closeCreateSheet();
+        }
+        if (reminderSheet.classList.contains('visible')) {
+          closeReminderSheet();
+        }
+      }
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        if (createSheet.classList.contains('visible')) closeCreateSheet();
+        if (reminderSheet.classList.contains('visible')) closeReminderSheet();
+      }
+    });
+
+    openCreateButton.addEventListener('click', openCreateSheet);
+
+    createSheet.addEventListener('transitionend', () => {
+      if (!createSheet.classList.contains('visible')) {
+        createForm.reset();
+        createReminderDrafts = [];
+        renderCreateReminderList();
+        resetReminderEditor(createReminderForm);
+        setCreateReminderFormType('');
+      }
+    });
+
+    reminderSheet.addEventListener('transitionend', () => {
+      if (!reminderSheet.classList.contains('visible')) {
+        reminderAddForm.reset();
+        setReminderFormType('');
+      }
+    });
+
+    createReminderTypeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        setCreateReminderFormType(button.dataset.type, { focus: true });
+      });
+    });
+
+    reminderTypeButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        setReminderFormType(button.dataset.type, { focus: true });
+      });
+    });
+
+    if (createReminderConfirmButton) {
+      createReminderConfirmButton.addEventListener('click', (event) => {
+        event.preventDefault();
+        const type = createReminderForm.dataset.type;
+        if (!type) {
+          alert('请选择提醒类型');
+          return;
+        }
+        const totalDurationSeconds = parseDurationInputs(
+          document.getElementById('duration-hours'),
+          document.getElementById('duration-minutes'),
+          document.getElementById('duration-seconds'),
+        );
+        if (totalDurationSeconds <= 0) {
+          alert('请先设置倒计时的持续时长');
+          return;
+        }
+        const hoursInput = createReminderForm.querySelector('input[name="hours"]');
+        const minutesInput = createReminderForm.querySelector('input[name="minutes"]');
+        const secondsInput = createReminderForm.querySelector('input[name="seconds"]');
+        const leadInput = createReminderForm.querySelector('input[name="lead"]');
+        const durationInput = createReminderForm.querySelector('input[name="duration"]');
+        const noteInput = createReminderForm.querySelector('textarea[name="note"]');
+
+        const hours = Number(hoursInput.value || 0);
+        const minutes = Number(minutesInput.value || 0);
+        const seconds = Number(secondsInput.value || 0);
+        const valueSeconds = hours * 3600 + minutes * 60 + seconds;
+        if (valueSeconds <= 0) {
+          alert('提醒触发时间需大于 0 秒');
+          return;
+        }
+        if (valueSeconds > totalDurationSeconds) {
+          alert('提醒时间需在总时长范围内');
+          return;
+        }
+        const leadSeconds = Number(leadInput.value || 0);
+        if (leadSeconds < 0) {
+          alert('提前提醒时间不能为负数');
+          return;
+        }
+        const maxLead = type === 'elapsed' ? valueSeconds : totalDurationSeconds - valueSeconds;
+        if (leadSeconds > maxLead) {
+          alert('提前提醒时间需要小于实际触发时间');
+          return;
+        }
+        const durationSeconds = Math.max(1, Number(durationInput.value || durationInput.defaultValue || 5));
+        const note = noteInput.value.trim();
+        createReminderDrafts.push({
+          type,
+          valueSeconds,
+          leadSeconds,
+          durationSeconds,
+          note,
+          triggered: false,
+        });
+        renderCreateReminderList();
+        resetReminderEditor(createReminderForm);
+        setCreateReminderFormType('');
+      });
+    }
+
+    reminderAddForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!activeReminderTimer) return;
+      const type = reminderAddForm.dataset.type;
+      if (!type) {
+        alert('请选择提醒类型');
+        return;
+      }
+      const hours = Number(reminderAddForm.hours.value || 0);
+      const minutes = Number(reminderAddForm.minutes.value || 0);
+      const seconds = Number(reminderAddForm.seconds.value || 0);
+      const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+      if (totalSeconds <= 0) {
+        alert('提醒触发时间需大于 0 秒');
+        return;
+      }
+      if (totalSeconds > activeReminderTimer.totalDuration / 1000) {
+        alert('提醒时间需在总时长范围内');
+        return;
+      }
+      const leadSeconds = Number(reminderAddForm.lead.value || 0);
+      if (leadSeconds < 0) {
+        alert('提前提醒时间不能为负数');
+        return;
+      }
+      const maxLead = type === 'elapsed' ? totalSeconds : activeReminderTimer.totalDuration / 1000 - totalSeconds;
+      if (leadSeconds > maxLead) {
+        alert('提前提醒时间需要小于实际触发时间');
+        return;
+      }
+      const durationSeconds = Math.max(1, Number(reminderAddForm.duration.value || 5));
+      const note = reminderAddForm.note.value.trim();
+      const reminder = {
+        id: `reminder-${reminderIdCounter++}`,
+        type,
+        valueSeconds: totalSeconds,
+        leadSeconds,
+        durationSeconds,
+        note,
+        triggered: false,
+      };
+      activeReminderTimer.reminders.push(reminder);
+      renderReminderList(activeReminderTimer);
+      showToast(activeReminderTimer.title, '提醒节点已添加');
+      reminderAddForm.reset();
+      setReminderFormType('');
+    });
+
+    createForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      const title = createForm.title.value.trim() || '未命名倒计时';
+      const hours = Number(document.getElementById('duration-hours').value || 0);
+      const minutes = Number(document.getElementById('duration-minutes').value || 0);
+      const seconds = Number(document.getElementById('duration-seconds').value || 0);
+      const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+      if (totalSeconds <= 0) {
+        alert('请至少设置 1 秒的持续时长');
+        return;
+      }
+      const totalDuration = totalSeconds * 1000;
+      const note = document.getElementById('timer-note').value.trim();
+      const invalidReminder = createReminderDrafts.find((reminder) => {
+        if (reminder.valueSeconds > totalSeconds) return true;
+        if (reminder.type === 'remaining' && reminder.leadSeconds > totalSeconds - reminder.valueSeconds) return true;
+        return false;
+      });
+      if (invalidReminder) {
+        alert('有提醒节点超出了当前设定的总时长，请调整后再试');
+        return;
+      }
+      const reminders = createReminderDrafts.map((reminder) => ({ ...reminder }));
+      createTimer({ title, totalDuration, note, reminders });
+      closeCreateSheet();
+    });
+
+    updateEmptyState();
+  </script>
+</body>
+</html>
